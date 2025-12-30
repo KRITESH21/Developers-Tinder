@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
   {
@@ -15,10 +16,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      lowercase: true,
+      validate(value) {
+        if(!validator.isEmail(value)) {
+          throw new Error("Email is invalid");
+        }
+      },
     },
     password: {
       type: String,
       required: true,
+      validate(value) {
+        if(!validator.isStrongPassword(value)) {
+          throw new Error("Password is not strong enough");
+        }
+      },
     },
     age: {
       type: Number,
@@ -26,7 +39,7 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      validate(value) {
+      validator(value) {
         const allowedGenders = ["male", "female", "other"];
         if (!allowedGenders.includes(value.toLowerCase())) {
           throw new Error("Gender must be male, female, or other");
@@ -35,9 +48,15 @@ const userSchema = new mongoose.Schema(
     },
     about: {
       type: String,
+      default: " I am a new user.",
     },
     skills: {
       type: [String],
+      validate(value) {
+        if (value.length>5) {
+          throw new Error("A user can have a maximum of 5 skills");
+        }
+      }
     },
   },
   {
