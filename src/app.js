@@ -63,16 +63,23 @@ app.delete("/delete", async (req, res) => {
   }
 });
 
-
 // Updating the data from the database
 
-app.patch('/update', async (req, res) => {
-    const id = req.body.id;
-    const data = req.body;
-    try {
-        await User.findByIdAndUpdate(id, data);
-        res.send("User updated");
-    } catch (err) {
-        res.status(500).send("Error updating user");
-    }   
-})
+app.patch("/update/:id", async (req, res) => {
+  const id = req.params?.id;
+  const data = req.body;
+  try {
+    // API level validations
+    const ALLOWED_UPDATES = ["password", "about", "skills"];
+    const isUpdateAllowed = Object.keys(data).every((e) =>
+      ALLOWED_UPDATES.includes(e)
+    );
+    if (!isUpdateAllowed) {
+      throw new Error("Update not allowed");
+    }
+    await User.findByIdAndUpdate(id, data, { runValidators: true });
+    res.send("User updated");
+  } catch (err) {
+    res.status(500).send("Error updating user " + err.message);
+  }
+});
