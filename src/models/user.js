@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+
 
 const userSchema = new mongoose.Schema(
   {
@@ -39,7 +42,7 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      validator(value) {
+      validate(value) {
         const allowedGenders = ["male", "female", "other"];
         if (!allowedGenders.includes(value.toLowerCase())) {
           throw new Error("Gender must be male, female, or other");
@@ -64,5 +67,18 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.methods.getJwt = async function () {
+  const user = this;
+  const token = jwt.sign({ _id: user._id }, "SECRET_KEY", {expiresIn: '7d'});
+  return token;
+}
+
+userSchema.methods.validatePassword = async function (passwordInputByUser) {
+  const user = this;
+  const passwordHash = user.password;
+  const isPasswordValid = await bcrypt.compare(passwordInputByUser, passwordHash);
+  return isPasswordValid;
+}
+
 const User = mongoose.model("User", userSchema);
-module.exports = User;
+module.exports = {User};
