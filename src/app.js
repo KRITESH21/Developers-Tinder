@@ -2,6 +2,8 @@ const express = require("express");
 const app = express();
 const connectDB = require("./config/database");
 const User = require("./models/user");
+const {validateSignUpData} = require("./utils/validation");
+const bcrypt = require("bcrypt");
 
 connectDB()
   .then(() => {
@@ -19,12 +21,41 @@ app.use(express.json());
 // Adding data to the database
 app.post("/signup", async (req, res) => {
   // Signup logic here
-  const user = new User(req.body);
+  const { firstName, lastName, email, gender, about, skills, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  // const user = new User(req.body); Not a good way
+  const user = new User({
+    firstName,
+    lastName,
+    email,
+    gender,
+    about,
+    skills,
+    password: hashedPassword,
+  });
   try {
+    validateSignUpData(req);
     await user.save();
     res.send("User signed up");
   } catch (error) {
     res.status(500).send("Error signing up user");
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Invalid password");
+    }
+    res.send("User logged in successfully");
+  } catch (error) {
+    res.status(500).send("Error logging in user "+ error.message);
   }
 });
 
