@@ -1,16 +1,17 @@
 const express = require("express");
 const app = express();
 const connectDB = require("./config/database");
-const {User} = require("./models/user");
-const { validateSignUpData } = require("./utils/validation");
-const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
-const userAuth = require("./middleware/auth");
-
-
-
+const authRouter = require("./routes/auth");
+const profileRouter = require("./routes/profile");
+const requestRouter = require("./routes/request");
+const {User} = require("./models/user");
+app.use(express.json());
 app.use(cookieParser());
+
+app.use("/", authRouter);
+app.use("/", profileRouter);
+app.use("/", requestRouter);
 
 connectDB()
   .then(() => {
@@ -23,65 +24,6 @@ connectDB()
     console.error("Database connection failed:", error);
   });
 
-app.use(express.json());
-
-// Adding data to the database
-app.post("/signup", async (req, res) => {
-  // Signup logic here
-  const { firstName, lastName, email, gender, about, skills, password } =
-    req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  // const user = new User(req.body); Not a good way
-  const user = new User({
-    firstName,
-    lastName,
-    email,
-    gender,
-    about,
-    skills,
-    password: hashedPassword,
-  });
-  try {
-    validateSignUpData(req);
-    await user.save();
-    res.send("User signed up");
-  } catch (error) {
-    res.status(500).send("Error signing up user");
-  }
-});
-
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email: email });
-    // console.log(user);
-    if (!user) {
-      throw new Error("User not found");
-    }
-    // const isPasswordValid = await bcrypt.compare(password, user.password);
-    const isPasswordValid = await user.validatePassword(password);
-    if (isPasswordValid) {
-      // Create a JWT token
-      const token = await user.getJwt();
-      // Add the token in the cookie
-      res.cookie("token", token);
-      res.send("User logged in successfully");
-    } else {
-      throw new Error("Invalid password");
-    }
-  } catch (error) {
-    res.status(500).send("Error logging in user " + error.message);
-  }
-});
-
-app.get("/profile", userAuth, async (req, res) => {
-  try {
-    const user = req.user;
-    res.send(user);
-  } catch (error) {
-    res.status(500).send("Error fetching profile " + error.message);
-  }
-});
 
 // Fetching data from the database
 
