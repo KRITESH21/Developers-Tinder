@@ -42,6 +42,10 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
+      // enum: {
+      //   values: ["male", "female", "other"],
+      //   message: `{VALUE} is not supported gender type.`,
+      // },
       validate(value) {
         const allowedGenders = ["male", "female", "other"];
         if (!allowedGenders.includes(value.toLowerCase())) {
