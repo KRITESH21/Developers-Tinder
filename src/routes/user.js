@@ -37,4 +37,39 @@ userRouter.get("user/connections", userAuth, async (req, res) => {
   }
 });
 
+userRouter.get("/feed", userAuth, async (req, res) => {
+    try {
+        const loggedInUser = req.user;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        limit = limit >50 ? 50 : limit; // max limit 50
+        const skip = (page - 1) * limit;
+
+        const connectionRequests = await ConnectionRequest.find({
+            $or: [
+                { fromUserId: loggedInUser._id },
+                { toUserId: loggedInUser._id }
+            ]
+        }).select('fromUserId toUserId');
+
+        const hideUsersFromFeed = new Set();
+        connectionRequests.forEach(request => {
+            hideUsersFromFeed.add(request.fromUserId.toString());
+            hideUsersFromFeed.add(request.toUserId.toString());
+        });
+
+        const users = await User.find({
+            $and: [
+                { _id: { $ne: loggedInUser._id } },
+                { _id: { $nin: Array.from(hideUsersFromFeed) } }
+            ]
+        }).select('firstName lastName age gender about skills').skip(skip).limit(limit);
+
+        res.status(200).json({ users });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+
+});
+
 module.exports = userRouter;
